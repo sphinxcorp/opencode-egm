@@ -30,6 +30,10 @@ independent review. Never continue a finished reviewer by session ID.
 ## Inputs
 
 *   **`path`**: The target root directory path to bootstrap (Required).
+*   **`is_worker`**: Internal parameter. `true` if executing as a worker
+    Sub-Orchestrator (Optional, default: `false`).
+*   **`sub_tree_root`**: Internal parameter. The root path of the assigned
+    subtree partition (Optional).
 *   **`target_filename`**: Target contract filename to generate or update
     (Optional, default: `"README.md"`). Supports alternate blueprint filenames
     such as `"EGM.md"` when pre-existing human-maintained READMEs must not be
@@ -43,18 +47,18 @@ independent review. Never continue a finished reviewer by session ID.
     `git add`). All filesystem changes must be written locally using standard
     file-writing tools. Tracking
     and submitting is deferred to the human user.
-3.  **Temporary File Isolation**: Keep your status, checkpoint,
-    and log files in your own directory outside the workspace (host scratch or
+3.  **Temporary File Isolation**: Each worker keeps its status, checkpoint,
+    and log files in its own directory outside the workspace (host scratch or
     `mktemp -d`), never a fixed, shared path. If neither exists, skip them.
 4.  **Tool Usage (CRITICAL)**: Use your shell, file-reading, file-writing, and file-editing tools for directory discovery and contract/README
     generation. Adhere to clean Markdown formatting directly during generation
     (standard headers, tables, and fenced code blocks). If a project markdown
     formatter (e.g. `npx prettier --write`) is explicitly configured in the
     repository, it may optionally be invoked.
-5.  **No Nested Delegation**: OpenCode cannot nest subagents, so process the
-    tree in this context.
+5.  **Subagent Delegation**: Spawn sub-orchestrator workers in parallel.
 6.  **Mandatory Safety Gate (CRITICAL)**: If you discover more than 15
-    subdirectories, you MUST immediately request user approval (using the `question` tool) before proceeding with full-tree execution.
+    subdirectories, you MUST immediately request user approval (using a structured question tool, ) before proceeding with full-tree execution
+    or unbounded subagent spawning.
 
 ---
 
@@ -75,13 +79,17 @@ independent review. Never continue a finished reviewer by session ID.
 
 ---
 
-### Step 1: Confirm Scope
+### Step 1: Startup Branching Control
 
-Proceed to **Step 2: Incremental Scoping & Safety Gate** for the whole `path`.
+1.  Check the `is_worker` input parameter.
+2.  If `is_worker` is `true`, jump directly to **Step 4: Sub-Orchestrator Worker
+    Flow** to process the assigned `sub_tree_root`.
+3.  If `is_worker` is `false` or unset, proceed as the Root Orchestrator to
+    **Step 2: Incremental Scoping & Safety Gate**.
 
 ---
 
-### Step 2: Incremental Scoping & Safety Gate
+### Step 2: Incremental Scoping & Safety Gate (Root Orchestrator)
 
 1.  **Incremental BFS Discovery**: Map the target `path` tree level-by-level
     (BFS) using a directory queue, listing one directory level at a time. (CRITICAL: never run a recursive search such as `find` or `ls -R`.)
@@ -95,9 +103,9 @@ Proceed to **Step 2: Incremental Scoping & Safety Gate** for the whole `path`.
         `go.mod`, `pyproject.toml`, `*.sln`, `*.csproj`, `Makefile`, `BUILD`) in
         the discovery map to extract verification targets later.
 
-2.  **Large Scope Approval (CRITICAL)**: During the BFS
+2.  **Safety Gate & Unbounded Spawning Approval (CRITICAL)**: During the BFS
     loop, if the total running count of discovered directories exceeds **15**,
-    immediately pause discovery and request user approval (using the `question` tool) to warn the user and request approval
+    immediately pause discovery and request user approval (using a structured question tool, ) to warn the user and request approval
     for full-tree execution:
 
     *   `question`: "The target directory tree contains more than 15
@@ -106,7 +114,7 @@ Proceed to **Step 2: Incremental Scoping & Safety Gate** for the whole `path`.
     *   `options`: `["Yes, proceed with full tree bootstrapping",
         "No, abort execution"]`
     *   (CRITICAL: After requesting approval, you MUST wait for the user's
-        response before continuing).
+        response before continuing or spawning any workers).
     *   If the user selects abort, terminate execution immediately.
 
 3.  **Bottom-up Post-Pruning Pass**: Once mapping is complete (and approved),
@@ -142,39 +150,72 @@ Proceed to **Step 2: Incremental Scoping & Safety Gate** for the whole `path`.
 
 ---
 
-### Step 3: Execution Strategy Selection
+### Step 3: Execution Strategy Selection (Root Orchestrator)
 
 1.  **Direct Execution Strategy (Directory Count <= 5)**:
 
     *   If the total count of pruned directories is 5 or fewer, execute the bottom-up
         documentation directly in the current thread.
-    *   Jump to **Step 4: Directory Contract Flow**, then proceed to
+    *   Jump to **Step 4: Sub-Orchestrator Worker Flow** (treating the Root
+        Orchestrator as the worker for the entire `path`), and then proceed to
         **Step 5: Root Compilation & Termination**.
 
-2.  **Sequential Execution Strategy (Directory Count > 5)**:
+2.  **Unbounded Parallel Subagent Swarm Strategy (Directory Count > 5)**:
 
-    OpenCode cannot nest subagents (`experimental.subagent_depth` defaults to
-    1), so nested subagents cannot spawn their own scouts or resolve their own
-    subtree. Process the pruned tree sequentially, deepest leaves first, in
-    this context. Follow Step 4 for every directory and write each contract
-    before moving to the next. Step 5 still compiles the root blueprint from
-    the documents this pass wrote.
+    *   (CRITICAL: If Directory Count > 15, you MUST verify that you have
+        received explicit user approval before proceeding. If not yet approved,
+        request approval immediately and wait for the user's response before
+        spawning workers).
+    *   Partition the discovery map into independent subtree branches using the
+        **Adaptive Depth Partitioning Algorithm**:
+        1.  Set `depth = 1`.
+        2.  Extract directory nodes from the discovery map located at the
+            current `depth`.
+        3.  If the count of nodes at `depth` is between 3 and 5: select these
+            nodes as subtree partition roots.
+        4.  If the count of nodes at `depth` < 3: increment `depth` (up to a max
+            of 3) and repeat step 2.
+        5.  If the count of nodes at `depth` > 5: group the largest branches (by
+            total nested folder count) into 3-4 separate partitions, combine the
+            remaining small branches into a single fallback partition subtree,
+            and select these as partition roots.
+        6.  Fallback: If `depth` reaches 3 and count is still < 3, select the
+            immediate children of the root (or fall back to sequential
+            execution).
+    *   **Spawn Unbounded Sub-Orchestrators**: For each partition subtree root,
+        use OpenCode's `subagent` tool to spawn a parallel worker:
+        *   Subagent: `egm-bootstrap-orchestrator` (`agents/bootstrap_orchestrator.md`) (or a general-purpose subagent)
+        *   `Prompt`: "Run egm-bootstrap with path=`[path]`,
+            is_worker=true, sub_tree_root=`[partition_root]`,
+            target_filename=`[target_filename]`."
+    *   **Unbounded Execution**: Spawn all Sub-Orchestrators in parallel without
+        artificial concurrency limits (as authorized by the user during the
+        safety gate).
+    *   Go idle and wait for all worker subagents to return their JSON subtree
+        index payloads. Jump to **Step 5: Root Compilation & Termination**.
 
-### Step 4: Directory Contract Flow
+---
 
-1.  **Scout Method**: A skill cannot define an ad-hoc subagent, so run the
-    read-only scout inline for each directory. Do not spawn a subagent for the
-    scout. Apply this explorer contract while you read:
+### Step 4: Sub-Orchestrator Worker Flow
 
-    *   **Interface**: public symbols the directory exposes.
-    *   **Invariants**: explicit checks, guards, or stated constraints.
-    *   **Side Effects**: writes, network calls, process or storage mutation.
+1.  **Scout Registration**: Use a read-only `goldfish-explorer` scout. Where supported defining subagents at runtime, register it with:
 
-    Cite `[file:symbol_or_flag]` for every entry. Never infer RPC methods,
-    routes, status enums, or invariants from names alone. Use `["None"]` when
-    the code contains no explicit invariant or side effect.
+    *   `name`: `goldfish-explorer`
+    *   `description`: `Read-only codebase explorer scout.`
+    *   `system_prompt`: >- You are a read-only codebase explorer. Your task is
+        to analyze the source files in the target directory and return a
+        concise, factual summary. Do not write or modify any files. Return a
+        JSON object containing the directory's public symbols (interface),
+        invariants, and side effects matching schema: {"interface": [],
+        "invariants": [], "side_effects": []}. Never infer RPC methods,
+        routes, status enums, or invariants from file or directory names
+        alone; cite the exact `[file:symbol_or_flag]` for every entry, and
+        output `["None"]` if no explicit invariants or side effects exist in
+        code.
+    *   `enable_write_tools`: `false`
+    *   `enable_subagent_tools`: `false`
 
-2.  **Post-Order Traversal**: Walk `path` in
+2.  **Post-Order Traversal**: Walk the assigned `sub_tree_root` (or `path`) in
     post-order (deepest leaves first). For each directory `D`:
 
     *   **Correction & Modification Policy**: Check if `target_filename` (default:
@@ -183,8 +224,8 @@ Proceed to **Step 2: Incremental Scoping & Safety Gate** for the whole `path`.
         *   If `target_filename` exists, **do not overwrite it completely**. Instead,
             read its existing content.
         *   *Scout Scan Requirement*: Whether `target_filename` exists or not,
-            **always scan** the source code for `D` inline to compile the
-            true code symbol boundary.
+            **always scan** the source code using the `goldfish-explorer` scout
+            for `D` to compile the true code symbol boundary.
         *   *Legacy Extraction & Correction*: If `target_filename` exists, call the
             reasoning LLM with prompt: > "Analyze the following unstructured
             documentation content. Extract all public symbol names, classes,
@@ -196,15 +237,15 @@ Proceed to **Step 2: Incremental Scoping & Safety Gate** for the whole `path`.
             and update the existing contract file to be EGM compliant while preserving
             developer notes and descriptions.
 
-    *   **Scout Scan & Constraints**: Read `D` inline.
+    *   **Scout Spawning & Constraints**: Spawn `goldfish-explorer` for `D`.
 
         *   *Scout Constraints*: No per-directory or per-file byte cap; every
-            non-test file in `D` is read in full. Bound each scan to
+            non-test file in `D` is read in full. Bound each scout call to
             about **1,500 lines** of source instead: list top-level definitions
             (class/func/def/route/flag lines) with your search tool, cut the
             directory's files into chunks at those boundaries (never mid-body;
-            small files share a chunk), read one chunk at a time, and merge the
-            extracted JSON. Give each chunk the
+            small files share a chunk), spawn one `goldfish-explorer` per
+            chunk in parallel, and merge their JSON. Give each chunk the
             file's imports and top-level definition list so it can judge
             visibility. Check build-manifest deps and `import` / `#include`
             statements before attributing an RPC service, schema, or message
@@ -220,7 +261,7 @@ Proceed to **Step 2: Incremental Scoping & Safety Gate** for the whole `path`.
                 directories); exclude `.css`/`.scss`.
             4.  Test files (`*_test.*`, `*Test.*`, `test_*.*`, `*.spec.*`):
                 ignore entirely, including in hybrid directories.
-        *   *Child Fault Tolerance*: If the inline scan fails or is cut short, log a
+        *   *Child Fault Tolerance*: If the scout fails or times out, log a
             warning, use placeholder values `["(Details pending/documentation
             failed)"]`, and continue execution.
 
@@ -233,7 +274,8 @@ Proceed to **Step 2: Incremental Scoping & Safety Gate** for the whole `path`.
                 interface directly from the in-memory execution cache.
             2.  If the child was corrected/modified (Correction Policy), use the
                 merged legacy extraction symbols.
-        *   Use these child symbol blocks as context when compiling `P`'s contract.
+        *   Pass these child symbol blocks as prompt context when invoking `P`'s
+            explorer scout.
 
     *   **Verification Command Target Lookup**: Populate the Verification section
         using the discovered `VerificationCommand`.
@@ -281,32 +323,38 @@ Proceed to **Step 2: Incremental Scoping & Safety Gate** for the whole `path`.
         tables, and code fences). If a project markdown formatter (e.g. `npx prettier --write`)
         is configured in the repository, you may execute it on `target_filename`.
 
-3.  **Contract Index**: Once the tree is fully traversed, compile
+3.  **Worker Reporting**: Once the assigned subtree is fully traversed, compile
     the `subtree_index` array containing the `path`, `summary`, `interface`,
     `invariants`, and `side_effects` for every processed directory.
 
-4.  Proceed directly to **Step 5: Root Compilation & Termination**.
+4.  If `is_worker` is `true`, read the [Worker Return Interface Schema](references/worker-return.schema.json)
+    relative to this skill directory, then return a matching JSON payload to
+    the Root Orchestrator and terminate. If
+    `is_worker` is `false` (sequential mode), proceed directly to **Step 5: Root
+    Compilation & Termination**.
 
 ---
 
 ### Step 5: Root Compilation & Termination (Root Orchestrator)
 
-1.  **Collect Results**: Sequential execution has no parallel results. Compile
-    from the contracts written in Step 4.
+1.  **Receive Worker Payloads**: Collect the JSON `subtree_index` payloads
+    returned by all parallel Sub-Orchestrators.
 
-    *   **Root Fault Tolerance**: If a contract is missing or incomplete, log a
+    *   **Root Fault Tolerance**: If a parallel worker fails or times out, log a
         warning, insert a placeholder warning link (`[Subtree Root]
-        (Documentation failed / Incomplete scan)`) in the root Blueprint's
-        subdirectory index, and complete the remaining compilation.
-        (Incomplete files are handled as an incremental
+        (Documentation failed / Subagent execution timeout)`) in the root
+        Blueprint's subdirectory index, and complete the remaining compilation.
+        (Worker failures leaving partial files are handled as an incremental
         progress feature; the Correction Policy allows resuming on subsequent
         runs).
 
 2.  **Intermediate Directory Documentation**: Identify any intermediate
-    directories sitting between the root `path` and the documented directories.
+    directories sitting between the root `path` and the partitioned subtree
+    roots.
 
     *   Process these intermediate directories sequentially bottom-up.
-    *   Generate Intermediate Blueprint contract files using the compiled summaries from Step 4.
+    *   Generate Intermediate Blueprint contract files using the compiled summaries
+        returned by the workers.
     *   Ensure clean formatting and valid relative links for each Intermediate
         Blueprint contract file.
 
@@ -318,26 +366,26 @@ Proceed to **Step 2: Incremental Scoping & Safety Gate** for the whole `path`.
         title, metadata, and architectural overview at the top of the root
         contract file.
     *   Check if `path` itself contains any direct source files. If present,
-        scan `path` inline to extract local symbols
+        spawn a `goldfish-explorer` scout for `path` to extract local symbols
         and invariants, appending them under the optional `## Local Interface &
         Invariants` section.
     *   Compile the final root `target_filename` using the **Repository Root Blueprint
         Template**, rolling up all top-level subdirectory boundaries. Ensure any
         root architecture or sequence diagrams strictly match the synchronous /
         asynchronous boundaries, operation names, and storage backends in the
-        child contracts without inventing unverified nodes.
+        child `subtree_index` payloads without inventing unverified nodes.
     *   Write the root `target_filename` using your file-writing tool.
 
 4.  **Final Correctness Verification (CRITICAL)**: You MUST perform a final
-    verification pass across ALL created and modified contract files
-    (including all child package contracts like `pkg1/${target_filename}`
+    verification pass across ALL created and modified contract files in the
+    `subtree_index` (including all child package contracts like `pkg1/${target_filename}`
     and `pkg2/${target_filename}`) as a correctness check before concluding work. You
     MUST explicitly read every single created or modified contract file
     to verify its content. Do not skip any child contract files. Verify:
 
     *   **EGM Compliance & Code Grounding**: Ensure `Interface`, `Invariants`,
         and `Side Effects` sections exist, cite real code symbols/flags/tables
-        from your inline scan, and contain zero speculative or unverified
+        from the scout extraction, and contain zero speculative or unverified
         claims.
     *   **Markdown Syntax**: Ensure clean headers, valid tables, and proper code block fences.
     *   **Valid & Resolvable Links (CRITICAL)**: Ensure all subdirectory and
@@ -349,7 +397,8 @@ Proceed to **Step 2: Incremental Scoping & Safety Gate** for the whole `path`.
         configuration and use valid target syntax (for Bazel, `/...` or
         `:all`, never `:...`).
 
-5.  **Optional Drift Review (CRITICAL)**: After verification, ask the user (using the `question` tool) to offer running a drift report
+5.  **Optional Drift Review (CRITICAL)**: After verification, ask the user (using
+    a structured question tool, ) to offer running a drift report
     on the generated documentation updates:
 
     *   `question`: "Do you want to run the EGM Drift Report on the generated

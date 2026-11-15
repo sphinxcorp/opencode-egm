@@ -58,7 +58,8 @@ name the reviewer; a review in the same context is not a Goldfish review.
 10. **Banned Apologies**: You MUST NOT output polite apologies (e.g., "I
     apologize," "I am sorry," "Forgive me") when challenged or corrected.
     Instead, outline the corrected technical logic or trade-offs directly.
-11. **Interaction Invariants**: All interactive gates (using the `question` tool) MUST contain
+11. **Interaction Invariants**: All interactive gates (structured question tools
+    using the `question` tool) MUST contain
     strictly one question (`len(questions) == 1`), be the sole tool call in the
     turn, and provide clear, action-oriented options without `(Recommended)`
     prefixes.
@@ -106,7 +107,7 @@ name the reviewer; a review in the same context is not a Goldfish review.
     answer, as in a headless run, leave them all out and keep going. Add only
     approved ones and tell the user which were left out. Some reviewers cannot
     open URLs, so save the raw page of each URL in `GoldfishContext` as a new
-    file in the working directory (using the `question` tool) and
+    file in the working directory (or the EGM artifact directory) and
     pass its absolute path instead. If a page cannot be saved, ask the user for
     a local copy and end your turn; if no one can answer, as in a headless run,
     leave it out, tell the user, and keep going. Pass
@@ -121,7 +122,9 @@ name the reviewer; a review in the same context is not a Goldfish review.
         individual stage `5`, `6`, `7`, `8`, `9`), map to the corresponding
         preset or subflow and bypass the interactive preset selection gate.
     *   Otherwise (if `Step` was omitted), you **MUST** present the Curated
-        Pipeline Presets single-select gate to the user (using the `question` tool).
+        Pipeline Presets single-select gate to the user (using a structured
+        question tool using the `question` tool
+        chat).
 2.  **Modal Invariants & Wire Payload**:
 
     *   The question payload **MUST** contain strictly one question object
@@ -190,7 +193,7 @@ name the reviewer; a review in the same context is not a Goldfish review.
     *   **Ambiguous Boundary / Multiple Candidate Headers**: If multiple
         conflicting headers or non-standard structures exist:
         *   Present a single-select gate (using a structured question tool such
-            as `question` with `len(questions) == 1`)
+            as `question` with `len(questions) == 1`, )
             proposing the most likely split line as Option 0, with Option 1
             allowing custom line ranges via write-in.
     *   **No Implementation Plan Found**: If the document contains only a
@@ -223,7 +226,8 @@ Once the semantic split and execution preset are confirmed:
 
 All interactive review stages conclude with an explicit single-select gate
 (using a structured question tool such as `question` with
-`len(questions) == 1`, `is_multi_select: false`, sole tool call in turn):
+`len(questions) == 1`, `is_multi_select: false`, sole tool call in turn, or
+):
 
 1.  **Stage Checkpoint Patterns**:
     *   **Stages 5, 6, 8 (Altitude & Comprehension Checkpoints)**:
@@ -273,7 +277,8 @@ All interactive review stages conclude with an explicit single-select gate
 
 1.  **Uninterrupted Stage Execution**: Execute all five review stages in
     sequence without interactive checkpoint pauses between steps. For each
-    stage, write the individual report file to the working directory (using the `question` tool). Pass `GoldfishContext` to
+    stage, write the individual report file to the working directory (or your
+    EGM artifact directory). Pass `GoldfishContext` to
     every step except Step 6.
     *   **Step 5 (Initial Zoom Out)**: Spawn `egm-synthesizer` (or direct
         subagent) with `Reviewers: [egm-zoom-out, egm-inventive-catalyst]` on

@@ -36,7 +36,9 @@ name the reviewer; a review in the same context is not a Goldfish review.
 
 1.  **Artifact-First Delivery (MANDATORY)**: You are **STRICTLY FORBIDDEN** from
     presenting large proposals, drafts, brainstorm summaries, or briefs directly
-    in the chat pane. You **MUST** write/update them directly to a file (using the `question` tool) using your file-writing tool and notify the user
+    in the chat pane. You **MUST** write/update them directly to a file (e.g.,
+    `./concepts_brief.md` in the working directory or your EGM artifact
+    directory, if it has one) using your file-writing tool and notify the user
     in the chat with a clean link to the file.
 2.  **Multi-Turn Open-Ended Clarification & Readiness Gate**: You **MUST** drill
     down into the concept through open-ended plain-text questions across
@@ -76,7 +78,8 @@ name the reviewer; a review in the same context is not a Goldfish review.
 12. **Banned Apologies**: You MUST NOT output polite apologies (e.g., "I
     apologize," "I am sorry," "Forgive me") when challenged or corrected.
     Instead, outline the corrected technical logic or trade-offs directly.
-13. **Interaction Invariants**: All interactive gates (using the `question` tool) MUST contain
+13. **Interaction Invariants**: All interactive gates (structured question tools
+    using the `question` tool) MUST contain
     strictly one question (`len(questions) == 1`), be the sole tool call in the
     turn, and provide clear, action-oriented options without `(Recommended)`
     prefixes.
@@ -120,7 +123,9 @@ name the reviewer; a review in the same context is not a Goldfish review.
 
 3.  **Readiness Checkpoint Gate (Single-Select)**: Once a clear foundation is
     established, summarize the anchored working hypothesis in 2-3 sentences.
-    Present an explicit single-select confirmation gate (using the `question` tool):
+    Present an explicit single-select confirmation gate (using a structured
+    question tool using the `question` tool
+    chat):
 
     ```json
     {
@@ -152,7 +157,8 @@ name the reviewer; a review in the same context is not a Goldfish review.
 ### Step 2: Goldfish Review & Synthesis
 
 1.  **Delegate to Synthesizer Subagent**: Spawn the intermediate
-    **`egm-synthesizer`** agent (using the `question` tool):
+    **`egm-synthesizer`** agent (or parallel Goldfish subagents across the 7
+    specialized lenses if your OpenCode cannot nest subagents):
     *   Subagent: `egm-synthesizer` (`agents/synthesizer.md`)
     *   `Prompt`: >- Conduct multi-lens brainstorm for feature concept:
         `[AnchoredFeatureHypothesis]`. Mode: `BRAINSTORM`. Reviewers:
@@ -166,7 +172,8 @@ name the reviewer; a review in the same context is not a Goldfish review.
 3.  **Deduplication**: Collect the raw findings from the Goldfish reviewers,
     deduplicate overlapping points, and format them into a cohesive analysis.
 4.  **Write/Update Artifact**: Format and write the synthesized brief to
-    `concepts_brief.md` in the working directory (using the `question` tool) using your file-writing tool.
+    `concepts_brief.md` in the working directory (or your EGM artifact
+    directory, if it has one) using your file-writing tool.
 
 The `concepts_brief.md` artifact follows this structure:
 
@@ -214,7 +221,8 @@ these into Alternatives Considered and has no other source for them.]
 1.  **Artifact Alignment**: Ask the user to review the final `concepts_brief.md`
     artifact and confirm their alignment.
 2.  **Step 4 Handoff Gate Modal (Single-Select)**: Once approved, present the
-    standardized handoff choices (using the `question` tool):
+    standardized handoff choices (using a structured question tool such as
+    `question` ):
 
     ```json
     {
@@ -242,13 +250,15 @@ these into Alternatives Considered and has no other source for them.]
             user that once feedback is gathered, a detailed design can be
             initiated by starting the `egm-draft` skill on
             `docs/designs/<feature_name>.md` with the host's command form (for
-            example `/egm-draft docs/designs/<feature_name>.md`).
+            example `/egm:egm-draft docs/designs/<feature_name>.md` in OpenCode
+            Code and OpenCode, or the skill picker in OpenCode).
     *   **Option 1: `Proceed to egm-draft (Initialize formal design
         document)`**:
         *   Confirm that `concepts_brief.md` is saved in the working directory
             or artifact directory.
         *   Instruct the user to start the `egm-draft` skill with the host's
-            command form (for example `/egm-draft`), noting that it automatically
+            command form (for example `/egm:egm-draft` in OpenCode and agy
+            CLI, or the skill picker in OpenCode), noting that it automatically
             ingests `concepts_brief.md` as its Priority 1 intake source.
     *   **Option 2: `Continue refining concepts_brief.md in ideation mode`**:
         *   Return to Step 3 iteration loop to drill into further edge cases or

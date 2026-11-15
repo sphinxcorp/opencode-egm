@@ -20,7 +20,8 @@ the aligned problem and requirements from the brainstorm phase.
     execution instructions in `resources/execution_instructions.md`.
 2.  **Artifact-First Delivery (MANDATORY)**: You are **STRICTLY FORBIDDEN** from
     presenting large proposals, drafts, summaries, or plans directly in the chat
-    pane. You **MUST** write them directly to the working directory (using the `question` tool) (`design_draft.md` or
+    pane. You **MUST** write them directly to the working directory (or your
+    EGM artifact directory) (`design_draft.md` or
     `./design_draft.md`) using your file-writing tool and tell the user in chat
     the file path and ask for review. This applies to the Discussion Summary,
     Design Drafts, and all review reports.
@@ -51,7 +52,8 @@ the aligned problem and requirements from the brainstorm phase.
 11. **Banned Apologies**: You MUST NOT output polite apologies (e.g., "I
     apologize," "I am sorry," "Forgive me") when challenged or corrected.
     Instead, outline the corrected technical logic or trade-offs directly.
-12. **Interaction Invariants**: All interactive gates (using the `question` tool) MUST contain
+12. **Interaction Invariants**: All interactive gates (structured question tools
+    using the `question` tool) MUST contain
     strictly one question (`len(questions) == 1`), be the sole tool call in the
     turn, and provide clear, action-oriented options without `(Recommended)`
     prefixes.
@@ -88,9 +90,10 @@ this strict generation order:
 1.  **Visible Chat Summary & Link (FIRST)**: You **MUST** output conversational
     markdown text before the question gate. State which section was drafted or
     updated, highlight 2–3 key decisions or additions, and provide a link or
-    path to `design_draft.md` (e.g., `[design draft](/absolute/project/design_draft.md)`).
+    path to `design_draft.md` (e.g., `[design draft](/absolute/project/design_draft.md)` in OpenCode).
 2.  **Approval Gate (SECOND)**: In the same turn, present the single-select
-    approval choice (using the `question` tool):
+    approval choice (using a structured question tool such as `question`
+    with `len(questions) == 1` and `is_multi_select: false` ):
 
 > [!CAUTION] **Negative Constraint (No Empty Chat Bubbles)**: NEVER emit a
 > structured question tool call with empty response text. Always generate the
@@ -149,7 +152,8 @@ this strict generation order:
     *   **Priority 3: Interactive Chat Prompt**: If neither file exists, prompt
         the user in chat for the feature's problem statement, goals, and
         technical context, or suggest that the user start the `egm-brainstorm`
-        skill with the host's command form (for example `/egm-brainstorm`).
+        skill with the host's command form (for example `/egm:egm-brainstorm`
+        in OpenCode and OpenCode, or the skill picker in OpenCode).
 3.  **Verify State**: Parse the document. Present a quick confirmation to the
     user to ensure we are starting with the correct context.
 4.  **Consensus**: Get explicit approval to start drafting the document.
@@ -167,7 +171,8 @@ this strict generation order:
 3.  **Focus**: Emphasize the *why* (the user need and business value) rather
     than the *how* (technical implementation).
 4.  **Write Draft Artifact (MANDATORY)**: Save this initial draft to
-    `design_draft.md` in the working directory (using the `question` tool) using your file-writing tool.
+    `design_draft.md` in the working directory (or your EGM artifact
+    directory, if it has one) using your file-writing tool.
 5.  **Notify & Verify (No Chat Dumps)**: You are **STRICTLY FORBIDDEN** from
     printing the draft in the chat. Instead, notify the user in conversational
     chat text that Overview & Problem Statement has been drafted, provide a
@@ -269,7 +274,8 @@ strictly:
     it. Otherwise, probe the workspace for existing design directories (from
     `Context File` directory, `docs/designs/`, or `<project>/docs/designs/`),
     bind `[DiscoveredPath]` (defaulting to `docs/designs/`), and present a
-    single-select gate (using the `question` tool):
+    single-select gate (using a structured question tool such as `question`
+    with `len(questions) == 1` and `is_multi_select: false` ):
 
     ```json
     {
@@ -306,4 +312,5 @@ strictly:
 6.  **Handoff**: Provide a clickable link to the finalized design and recommend
     that the user review it by starting the `egm-review` skill on
     `<DESIGN_PATH>` with the host's command form (for example
-    `/egm-review <DESIGN_PATH>`).
+    `/egm:egm-review <DESIGN_PATH>` in OpenCode and OpenCode, or the skill
+    picker in OpenCode).

@@ -14,16 +14,22 @@ the OpenCode plugin runtime (`src/`), bundle validation, and OpenCode-specific r
 3. Compare upstream `agents/`, `skills/`, and `resources/` against `bundle/`.
 4. Apply OpenCode-specific rewrites to the fetched copy. Adapt to upstream wording/structure
    changes as needed. If a file cannot be safely rewritten, stop and report it.
-5. Run `npm run validate`. Fix any failures before promotion.
-6. Present a promotion diff and wait for approval.
-7. On approval, overwrite `bundle/` with the validated upstream copy, update
+5. Remove upstream-only packaging artifacts that OpenCode does not use: per-skill
+   `agents/` (openai.yaml), `assets/` (icons), `TEST.md`, and `test_scenarios.yaml`.
+   Keep `SKILL.md`, `references/`, and `resources/`.
+6. Run `npm run validate`. Fix any failures before promotion.
+7. Present a promotion diff and wait for approval.
+8. On approval, overwrite `bundle/` with the validated upstream copy, update
    `upstream.lock.json` with the new commit SHA, and re-run `npm run validate`.
-8. Remove the temp directory unless `--keep` was requested.
+9. Remove the temp directory unless `--keep` was requested.
 
 ### Validation
 
 - `npm run validate` must pass before and after promotion.
 - `bundle/docs/` is plugin-owned; do not sync it from upstream.
+- Only `SKILL.md`, `references/`, agents, and resources are needed; drop
+  OpenAI/Codex packaging metadata (`agents/openai.yaml`, `assets/`, `TEST.md`,
+  `test_scenarios.yaml`) during sync.
 - `src/index.ts` agent/skill lists must be updated manually when upstream adds or removes assets.
 
 ### Drift policy
