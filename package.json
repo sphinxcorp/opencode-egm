@@ -1,6 +1,6 @@
 {
   "name": "@sphinxcorp/opencode-egm",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "OpenCode V2 plugin for the Elephant & Goldfish Model (EGM).",
   "keywords": [
     "opencode",
@@ -12,7 +12,7 @@
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
-    "url": "https://github.com/sphinxcorp/opencode-egm"
+    "url": "git+https://github.com/sphinxcorp/opencode-egm.git"
   },
   "homepage": "https://github.com/sphinxcorp/opencode-egm#readme",
   "bugs": {
@@ -32,11 +32,10 @@
   },
   "files": [
     "dist",
-    "bundle",
     "README.md"
   ],
   "scripts": {
-    "build": "tsc -p tsconfig.json",
+    "build": "tsc -p tsconfig.json && rm -rf dist/bundle && cp -r bundle dist/bundle",
     "prepublishOnly": "npm run build && npm run validate && npm test",
     "test": "node --experimental-strip-types tests/unit/opencode_plugin_harness.mjs .",
     "validate": "node scripts/validate-bundle.mjs",
