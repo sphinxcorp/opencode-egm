@@ -1,34 +1,71 @@
-# egm-opencode-plugin Blueprint
+# @sphinxcorp/opencode-egm
 
-## System Overview
-Native OpenCode plugin packaging the Elephant & Goldfish Model (EGM). The
-plugin registers one primary orchestrator (`egm`), eight read-only reviewer
-subagents, seven slash commands, and seven skills via OpenCode V2 plugin
-transforms. It writes no configuration files and never changes the default
-agent. The bundle is OpenCode-only.
+OpenCode V2 plugin for the Elephant & Goldfish Model (EGM).
 
-## Local Interface & Invariants
-- `build.py:build` — generates a loadable plugin directory (`dist/egm`) from `canonical/` and `src/`, rewriting harness-specific instructions to OpenCode; fails on stale rewrites or forbidden harness names.
-- `build.py:ROOT` — `canonical/` directory; `build.py:HERE` — repository root; `build.py:DEFAULT_OUT` — `dist/egm`.
-- `build.py:REVIEWER_FILES`, `build.py:SKILLS` — canonical lists of reviewer personas and skill IDs.
-- `build.py:FORBIDDEN` — regex rejecting non-OpenCode harness names in built output.
-- `install.py:install` — copies the built plugin into `<config>/plugins/egm`; refuses to overwrite an existing install.
-- `install.py:default_config_dir` — resolves OpenCode global config dir via `XDG_CONFIG_HOME` or `~/.config/opencode`.
-- `install.py:prior_artifacts` — detects a previous discovery-based EGM install that would duplicate registration.
-- `install.py:main` — CLI entry point (`--config-dir`, `--uninstall`).
-- Invariant: build output must contain no agent/command/skill discovery files (`[build.py:build]`).
-- Invariant: installer never replaces an existing plugin directory (`[install.py:install]`).
+EGM helps develop ideas with context and review documents with fresh eyes. It registers:
 
-## Subdirectories & System Boundaries
-- [src](./src/README.md) - Native OpenCode V2 plugin entry point registering agents, commands, and skills.
+- One primary orchestrator agent: `egm`
+- Eight read-only reviewer subagents (Goldfish reviewers)
+- Seven slash commands: `/egm-bootstrap`, `/egm-brainstorm`, `/egm-draft`, `/egm-drift-report`, `/egm-resolve`, `/egm-review`, `/egm-review-loop`
+- Seven skills with OpenCode-specific execution instructions
 
-## Global Invariants
-- The bundle is OpenCode-only; no adapter or instruction set for other coding agents is shipped (`[src/index.js]` header, `[build.py]` docstring).
-- `experimental.subagent_depth` defaults to 1; reviewers never delegate (`[docs/opencode-plugin.md]`).
+## Installation
 
-## Global Side Effects
-- `build()` writes to `dist/egm` and removes any prior output at that path (`[build.py:build]`).
-- `install()` copies the built tree into the OpenCode configuration directory (`[install.py:install]`).
+From npm:
 
-## System Verification
-- Run: `pytest`
+```sh
+opencode plugin add @sphinxcorp/opencode-egm
+```
+
+From GitHub:
+
+```sh
+opencode plugin add github:sphinxcorp/opencode-egm
+```
+
+Or add it to your `opencode.jsonc`:
+
+```jsonc
+{
+  "plugins": ["@sphinxcorp/opencode-egm"]
+}
+```
+
+## Usage
+
+Run any EGM slash command in an OpenCode session, for example:
+
+```
+/egm-review /path/to/design.md
+```
+
+The orchestrator dispatches specialized reviewers in fresh subagent sessions and writes reports to your working directory.
+
+## Repository structure
+
+```
+index.ts              # Plugin entry point (TypeScript)
+bundle/               # Agents, skills, and resources shipped with the plugin
+scripts/              # Validation and maintenance helpers
+AGENTS.md             # Agent-driven upstream sync workflow
+upstream.lock.json    # Last synced upstream commit
+```
+
+## Development
+
+```sh
+npm install
+npm run validate      # Validate bundle contents
+npm run build         # Typecheck
+npm test              # Registration smoke test
+```
+
+## Upstream sync
+
+This plugin ports content from https://github.com/google/elephant-goldfish-model.
+See `AGENTS.md` for the agent-driven sync workflow that fetches upstream assets,
+applies OpenCode rewrites, and validates before promotion.
+
+## License
+
+Apache-2.0

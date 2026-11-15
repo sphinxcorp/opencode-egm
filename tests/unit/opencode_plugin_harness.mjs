@@ -13,12 +13,15 @@
  */
 
 import path from "node:path"
+import { existsSync } from "node:fs"
 import { pathToFileURL } from "node:url"
 
 const directory = process.argv[2]
 if (!directory) throw new Error("usage: opencode_plugin_harness.mjs <plugin-directory>")
 
-const { default: plugin } = await import(pathToFileURL(path.join(directory, "index.js")).href)
+const indexPath = ["index.ts", "index.js"].map((name) => path.join(directory, name)).find((candidate) => existsSync(candidate))
+if (!indexPath) throw new Error("no index.ts or index.js in " + directory)
+const { default: plugin } = await import(pathToFileURL(indexPath).href)
 
 const agents = new Map()
 const commands = new Map()
