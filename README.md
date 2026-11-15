@@ -17,12 +17,6 @@ From npm:
 opencode plugin add @sphinxcorp/opencode-egm
 ```
 
-From GitHub:
-
-```sh
-opencode plugin add github:sphinxcorp/opencode-egm
-```
-
 Or add it to your `opencode.jsonc`:
 
 ```jsonc
