@@ -35,5 +35,19 @@ jobs:
       - name: Test
         run: npm test
 
+      - name: Check if version already published
+        id: version_check
+        run: |
+          PKG_VERSION=$(node -p "require('./package.json').version")
+          PUBLISHED=$(npm view @sphinxcorp/opencode-egm version 2>/dev/null || echo "")
+          if [ "$PKG_VERSION" = "$PUBLISHED" ]; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            echo "Version $PKG_VERSION already published; skipping."
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+            echo "Publishing $PKG_VERSION (published: ${PUBLISHED:-none})."
+          fi
+
       - name: Publish to npm
+        if: steps.version_check.outputs.skip != 'true'
         run: npm publish --access public --provenance
