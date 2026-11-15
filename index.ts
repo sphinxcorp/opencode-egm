@@ -9,7 +9,7 @@
  * directory with a SKILL.md becomes a slash command and skill.
  */
 
-import { readFileSync, readdirSync } from "node:fs"
+import { readFileSync, readdirSync, existsSync } from "node:fs"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
 import { Plugin } from "@opencode/plugin"
@@ -78,6 +78,7 @@ function loadSkills(): Skill[] {
     .sort()
     .map((id) => {
       const skillPath = path.join(dir, id, "SKILL.md")
+      if (!existsSync(skillPath)) return null
       const text = readFileSync(skillPath, "utf8")
       const { header, body } = splitFrontmatter(text)
       return {
@@ -87,6 +88,7 @@ function loadSkills(): Skill[] {
         content: body,
       }
     })
+    .filter((item): item is Skill => item !== null)
 }
 
 const CONTEXT =
@@ -103,9 +105,8 @@ function reviewerPermissions() {
     { action: "read", resource: "*.env.*", effect: "deny" },
     { action: "read", resource: "*.env.example", effect: "allow" },
     { action: "glob", resource: "*", effect: "allow" },
-    { action: "grep", resource: "*", effect: "deny" },
-    { action: "external_directory", resource: "*", effect: "deny" },
-    { action: "external_directory", resource: `${BUNDLE}/*`, effect: "allow" },
+    { action: "grep", resource: "*", effect: "allow" },
+    { action: "external_directory", resource: "*", effect: "allow" },
   ]
 }
 
