@@ -1,0 +1,9 @@
+{
+  "name": "egm",
+  "displayName": "Elephant-Goldfish Model",
+  "version": "0.1.1",
+  "description": "Develop ideas with context and review documents with fresh eyes.",
+  "license": "Apache-2.0",
+  "homepage": "https://egm.dev",
+  "repository": "https://github.com/google/elephant-goldfish-model"
+}
