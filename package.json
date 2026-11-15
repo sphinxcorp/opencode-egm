@@ -2,29 +2,47 @@
   "name": "@sphinxcorp/opencode-egm",
   "version": "0.1.1",
   "description": "OpenCode V2 plugin for the Elephant & Goldfish Model (EGM).",
-  "keywords": ["opencode", "opencode-plugin", "egm", "elephant-goldfish-model"],
+  "keywords": [
+    "opencode",
+    "opencode-plugin",
+    "egm",
+    "elephant-goldfish-model"
+  ],
   "author": "SphinxCorp",
   "license": "Apache-2.0",
-  "repository": { "type": "git", "url": "https://github.com/sphinxcorp/opencode-egm" },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/sphinxcorp/opencode-egm"
+  },
   "homepage": "https://github.com/sphinxcorp/opencode-egm#readme",
-  "bugs": { "url": "https://github.com/sphinxcorp/opencode-egm/issues" },
-  "publishConfig": { "access": "public" },
+  "bugs": {
+    "url": "https://github.com/sphinxcorp/opencode-egm/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
   "type": "module",
-  "main": "./index.ts",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "exports": {
-    ".": "./index.ts"
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
   },
   "files": [
-    "index.ts",
-    "src",
+    "dist",
     "bundle",
     "README.md"
   ],
   "scripts": {
     "build": "tsc -p tsconfig.json",
+    "prepublishOnly": "npm run build && npm run validate && npm test",
     "test": "node --experimental-strip-types tests/unit/opencode_plugin_harness.mjs .",
-    "validate": "node scripts/validate-bundle.mjs"
-  },  "dependencies": {
+    "validate": "node scripts/validate-bundle.mjs",
+    "prepare": "npm run build"
+  },
+  "dependencies": {
     "@opencode/plugin": "^2.3.0"
   },
   "devDependencies": {
